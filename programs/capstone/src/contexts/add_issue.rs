@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::states::{Event, IssueBook, Issue};
-use crate::ErrorCode;
+use crate::error::ErrorCode;
 
 #[derive(Accounts)]
 pub struct AddIssue<'info> {
@@ -17,10 +17,10 @@ pub struct AddIssue<'info> {
 
     #[account(
         mut,
-        seeds = [b"issues_book", event.event_id.to_le_bytes().as_ref()],
-        bump = event.issues_book_bump,
+        seeds = [b"issue_book", event.event_id.to_le_bytes().as_ref()],
+        bump = event.issue_book_bump,
     )]
-    pub issues_book: Account<'info, IssueBook>,
+    pub issue_book: Account<'info, IssueBook>,
 
     pub system_program: Program<'info, System>,
 }
@@ -36,7 +36,7 @@ impl<'info> AddIssue<'info> {
             ErrorCode::UnauthorizedMaintainer
         );
 
-       let issue_book = &mut self.issues_book;
+       let issue_book = &mut self.issue_book;
        for mut issue in issues {
         issue.resolved_status = false;
         issue.resolved_at = None;

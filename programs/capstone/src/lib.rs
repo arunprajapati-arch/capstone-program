@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 
 mod contexts;
 mod states;
+mod error;
 
 use contexts::*;
 use states::Issue;
@@ -32,13 +33,16 @@ pub mod capstone {
         ctx: Context<AddIssue>,
         issues: Vec<Issue>,
     ) -> Result<()> {
-        ctx.accounts.add_issue(issues)?;
-        Ok(())
+        ctx.accounts.add_issue(issues)
+    }
+
+    pub fn resolve_issue(
+        ctx: Context<ResolveIssue>,
+        issue_id: u64,
+        contributor: Pubkey,
+    ) -> Result<()> {
+        ctx.accounts.resolve_issue(issue_id, contributor)
     }
 }
 
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Only the event maintainer can perform this action")]
-    UnauthorizedMaintainer,
-}
+

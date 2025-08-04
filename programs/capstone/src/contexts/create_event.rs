@@ -29,10 +29,10 @@ pub struct CreateEvent<'info> {
         init,
         payer = maintainer,
         space = IssueBook::DISCRIMINATOR.len() + IssueBook::INIT_SPACE,
-        seeds = [b"issues_book", event_id.to_le_bytes().as_ref()],
+        seeds = [b"issue_book", event_id.to_le_bytes().as_ref()],
         bump,
     )]
-    pub issues_book: Account<'info, IssueBook>,
+    pub issue_book: Account<'info, IssueBook>,
 
     #[account(
         init,
@@ -66,12 +66,12 @@ impl<'info> CreateEvent<'info> {
             rewards_split_percentage,
             event_bump: bumps.event, 
             rewards_vault_bump: bumps.rewards_vault,
-            issues_book_bump: bumps.issues_book, 
+            issue_book_bump: bumps.issue_book, 
             leaderboard_bump: bumps.leaderboard,
         });
 
         // Initialize IssueBook
-        self.issues_book.set_inner(IssueBook {
+        self.issue_book.set_inner(IssueBook {
             event_id,
             issues: Vec::new(),
         });

@@ -12,6 +12,6 @@ pub struct Event {
     pub rewards_split_percentage: [u16; 3],
     pub event_bump: u8,
     pub rewards_vault_bump: u8,
-    pub issues_book_bump: u8,
+    pub issue_book_bump: u8,
     pub leaderboard_bump: u8,
 }
