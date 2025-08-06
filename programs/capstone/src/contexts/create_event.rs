@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::states::{Event, IssueBook, Leaderboard};
+use crate::states::{Event, IssueBook, Leaderboard, Entry};
 
 #[derive(Accounts)]
 #[instruction(event_id: u64, name: String)]

@@ -45,13 +45,16 @@ impl<'info> ResolveIssue<'info> {
 
         let  leaderboard = &mut self.leaderboard;
         let  entry = leaderboard.entries.iter_mut().find(|entry| entry.contributor == contributor);
+
         if entry.is_none() {
             leaderboard.entries.push(Entry {
                 contributor,
                 points: to_resolve_issue.points,
             });
         } else {
-            entry.unwrap().points += to_resolve_issue.points;
+            let entry = entry.unwrap();
+            require!(entry.contributor == contributor, ErrorCode::InvalidContributor);
+            entry.points += to_resolve_issue.points;
         }
 
         Ok(())

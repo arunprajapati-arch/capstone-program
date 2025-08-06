@@ -9,9 +9,10 @@ pub struct Leaderboard {
     pub entries: Vec<Entry>,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default, InitSpace)]
 pub struct Entry {
     pub contributor: Pubkey,
     pub points: u64,
 }
+
 

@@ -23,4 +23,10 @@ pub enum ErrorCode {
 
     #[msg("Event already started")]
     EventAlreadyStarted,
+
+    #[msg("Event is full")]
+    EventFull,
+
+    #[msg("Invalid contributor")]
+    InvalidContributor,
 }
