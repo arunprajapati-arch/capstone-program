@@ -110,7 +110,7 @@ describe("capstone", () => {
     expect(leaderboard.eventId.toNumber()).to.equal(eventId);
     expect(leaderboard.entries).to.be.empty; // Should have no entries initially
 
-    console.log("✅ Event created successfully!");
+    console.log(" Event created successfully!");
   });
 
   it("Can add issues to an event", async () => {
@@ -226,7 +226,7 @@ describe("capstone", () => {
     expect(issuesBook.issues[0].issueId.toNumber()).to.equal(1);
     expect(issuesBook.issues[1].issueId.toNumber()).to.equal(2);
 
-    console.log("✅ Issues added successfully!");
+    console.log(" Issues added successfully!");
   });
 
   it("Can add more issues later", async () => {
@@ -370,7 +370,7 @@ describe("capstone", () => {
     expect(issuesBook.issues[1].resolvedStatus).to.be.false;
     expect(issuesBook.issues[2].resolvedStatus).to.be.false;
 
-    console.log("✅ Multiple batches of issues added successfully!");
+    console.log(" Multiple batches of issues added successfully!");
   });
 
   it("Cannot add issues if not the maintainer", async () => {
@@ -494,7 +494,7 @@ describe("capstone", () => {
                        errorMessage.includes("seeds constraint") ||
                        errorMessage.includes("AnchorError");
       expect(isBlocked).to.be.true;
-      console.log("✅ Unauthorized access correctly blocked!");
+        console.log(" Unauthorized access correctly blocked!");
     }
 
     // Verify that no malicious issues were added
@@ -643,7 +643,7 @@ describe("capstone", () => {
     expect(leaderboard.entries[0].contributor.toString()).to.equal(contributorKeypair.publicKey.toString());
     expect(leaderboard.entries[0].points.toNumber()).to.equal(100);
 
-    console.log("✅ Issue resolved successfully!");
+    console.log(" Issue resolved successfully!");
   });
 
   it("Can resolve multiple issues and accumulate points", async () => {
@@ -840,7 +840,7 @@ describe("capstone", () => {
     expect(issuesBook.issues[1].resolvedStatus).to.be.true;
     expect(issuesBook.issues[2].resolvedStatus).to.be.true;
 
-    console.log("✅ Multiple issues resolved and points accumulated successfully!");
+    console.log(" Multiple issues resolved and points accumulated successfully!");
   });
 
   it("Cannot resolve an issue if not the maintainer", async () => {
@@ -991,7 +991,7 @@ describe("capstone", () => {
                        errorMessage.includes("seeds constraint") ||
                        errorMessage.includes("AnchorError");
       expect(isBlocked).to.be.true;
-      console.log("✅ Unauthorized resolution correctly blocked!");
+      console.log(" Unauthorized resolution correctly blocked!");
     }
 
     // Verify that the issue was not resolved
@@ -1140,7 +1140,7 @@ describe("capstone", () => {
       const isBlocked = errorMessage.includes("InvalidIssueId") || 
                        errorMessage.includes("AnchorError");
       expect(isBlocked).to.be.true;
-      console.log("✅ Invalid issue ID correctly blocked!");
+      console.log(" Invalid issue ID correctly blocked!");
     }
 
     // Verify that no issues were resolved
@@ -1305,7 +1305,7 @@ describe("capstone", () => {
       const isBlocked = errorMessage.includes("InvalidIssueId") || 
                        errorMessage.includes("AnchorError");
       expect(isBlocked).to.be.true;
-      console.log("✅ Already resolved issue correctly blocked!");
+      console.log(" Already resolved issue correctly blocked!");
     }
 
     // Verify that the issue remains resolved with original data
@@ -1532,7 +1532,7 @@ describe("capstone", () => {
     expect(contributor2Entry).to.not.be.undefined;
     expect(contributor2Entry.points.toNumber()).to.equal(200); // 200
 
-    console.log("✅ Multiple contributors resolved issues successfully!");
+    console.log(" Multiple contributors resolved issues successfully!");
   });
 
   it("Shows leaderboard functionality and display", async () => {
