@@ -37,11 +37,15 @@ pub struct FinishEvent<'info> {
 }
 
 impl<'info> FinishEvent<'info> {
-    pub fn finish_event(&mut self, bumps: FinishEventBumps) -> Result<()> {
+    pub fn finish_event(&mut self,event_id: u64, bumps: &FinishEventBumps) -> Result<()> {
         require!(self.event.end_date < Clock::get()?.unix_timestamp, ErrorCode::EventNotEnded);
         require!(self.maintainer.key() == self.event.maintainer, ErrorCode::InvalidMaintainer);
+        require!(self.event.event_id == event_id, ErrorCode::InvalidEventId);
 
         self.leaderboard.entries.sort_by_key(|entry| entry.points);
+        if self.leaderboard.entries.len() < 3 {
+            return Err(ErrorCode::NotEnoughEntries.into());
+        }
         let top_3_entries = self.leaderboard.entries.iter().take(3).collect::<Vec<_>>();
         self.winners.set_inner(Winners {
             event_id: self.event.event_id,

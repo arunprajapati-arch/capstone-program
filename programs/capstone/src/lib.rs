@@ -43,6 +43,19 @@ pub mod capstone {
     ) -> Result<()> {
         ctx.accounts.resolve_issue(issue_id, contributor)
     }
+
+    pub fn finish_event(
+        ctx: Context<FinishEvent>,
+        event_id: u64,
+    ) -> Result<()> {
+        ctx.accounts.finish_event(event_id, &ctx.bumps)
+    }
+
+    pub fn claim_rewards(
+        ctx: Context<ClaimRewards>,
+    ) -> Result<()> {
+        ctx.accounts.claim_rewards()
+    }
 }
 
 

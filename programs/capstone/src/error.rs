@@ -29,4 +29,7 @@ pub enum ErrorCode {
 
     #[msg("Invalid contributor")]
     InvalidContributor,
+
+    #[msg("Not enough entries")]
+    NotEnoughEntries,
 }
