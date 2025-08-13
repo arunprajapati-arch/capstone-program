@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use anchor_lang::prelude::*;
 use crate::states::{Event, Leaderboard, Winners};
 use crate::error::ErrorCode;
@@ -12,6 +13,7 @@ pub struct FinishEvent<'info> {
         mut,
         seeds = [b"event", maintainer.key().as_ref(), event.event_id.to_le_bytes().as_ref(), event.event_name.as_bytes().as_ref()],
         bump = event.event_bump,
+        has_one = maintainer @ ErrorCode::InvalidMaintainer
     )]
     pub event: Account<'info, Event>,
 
@@ -42,7 +44,7 @@ impl<'info> FinishEvent<'info> {
         require!(self.maintainer.key() == self.event.maintainer, ErrorCode::InvalidMaintainer);
         require!(self.event.event_id == event_id, ErrorCode::InvalidEventId);
 
-        self.leaderboard.entries.sort_by_key(|entry| entry.points);
+        self.leaderboard.entries.sort_by_key(|entry| Reverse(entry.points));
         if self.leaderboard.entries.len() < 3 {
             return Err(ErrorCode::NotEnoughEntries.into());
         }

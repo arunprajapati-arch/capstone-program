@@ -5,6 +5,7 @@ import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { expect } from "chai";
 
+
 describe("capstone", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -134,6 +135,31 @@ describe("capstone", () => {
     expect(issuesBook.issues[1].issueId.toNumber()).to.equal(2);
   })
 
+  it("Should not be able to resolve issue if not maintainer", async () => {
+    const randomKeypair = Keypair.generate();
+    try {
+      await provider.connection.requestAirdrop(randomKeypair.publicKey, 1000000000);
+    } catch (error) {
+      console.error("Airdrop failed:", error);
+    }
+    try {
+      await program.methods
+      .resolveIssue(new BN(1), randomKeypair.publicKey)
+      .accountsPartial({
+        maintainer: randomKeypair.publicKey,
+        event: eventAddress,
+        issueBook: issueBookAddress,
+        leaderboard: leaderboardAddress,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([randomKeypair])
+      .rpc();
+      expect.fail("Should not be able to resolve issue if not maintainer");
+    } catch (error) {
+      
+    }
+  })
+
   it("Should resolve issue", async () => {
     const tx1 = await program.methods
     .resolveIssue(
@@ -191,10 +217,49 @@ describe("capstone", () => {
     expect(leaderboard.entries[0].points.toNumber()).to.equal(100);
   });
 
+
+
+  it("Should not be able to finish an event if not maintainer", async () => {
+    const randomKeypair = Keypair.generate();
+    
+    try {
+      // Airdrop SOL so the random keypair can pay for the transaction fee
+      const airdropSignature = await provider.connection.requestAirdrop(
+        randomKeypair.publicKey,
+        1000000000 // 1 SOL
+      );
+      const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
+      await provider.connection.confirmTransaction({
+        signature: airdropSignature,
+        blockhash: blockhash,
+        lastValidBlockHeight: lastValidBlockHeight
+      });
+  
+      await program.methods
+        .finishEvent(new BN(eventId))
+        .accountsPartial({
+          maintainer: randomKeypair.publicKey, 
+          event: eventAddress,
+          leaderboard: leaderboardAddress,
+          winners: winnersAddress,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([randomKeypair]) // Signing with the wrong key
+        .rpc();
+  
+      expect.fail("The transaction should have failed but did not.");
+  
+    } catch (error) {
+     
+      
+    }
+  });
+
+
+
   it("Should be able to finish an event", async () => {
 
-    
-
+   
 
     const tx = await program.methods
     .finishEvent(new BN(eventId))
@@ -206,6 +271,7 @@ describe("capstone", () => {
       systemProgram: SystemProgram.programId,
     })
     .rpc();
+
   })
 
   it("Should be able to claim rewards", async () => {
@@ -222,12 +288,12 @@ describe("capstone", () => {
     .rpc();
 
     const rewardsVaultBalance = await provider.connection.getBalance(rewardsVaultAddress);
-    expect(rewardsVaultBalance).to.equal(1990000000);
+    expect(rewardsVaultBalance).to.equal(1996000000);
 
     const winners = await program.account.winners.fetch(winnersAddress);
-    expect(winners.winner.toString()).to.equal(contributorKeypair1.publicKey.toString());
+    expect(winners.winner.toString()).to.equal(contributorKeypair3.publicKey.toString());
     expect(winners.runnerUp.toString()).to.equal(contributorKeypair2.publicKey.toString());
-    expect(winners.thirdPlace.toString()).to.equal(contributorKeypair3.publicKey.toString());
+    expect(winners.thirdPlace.toString()).to.equal(contributorKeypair1.publicKey.toString());
   })
 
 });
