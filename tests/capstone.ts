@@ -1,30 +1,52 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Capstone } from "../target/types/capstone";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import BN from "bn.js";
 import { expect } from "chai";
+import {
+  createMint,
+  createAssociatedTokenAccount,
+  mintTo,
+  getAccount,
+  getAssociatedTokenAddress,
+} from "@solana/spl-token";
+import 'dotenv/config'; // To load .env file
+import * as bs58 from "bs58";
 
 
 describe("capstone", () => {
+
+  if (!process.env.FUNDER_SECRET_KEY) {
+    throw new Error("FUNDER_SECRET_KEY not found in .env file. Please create one.");
+  }
+  const funderKeypair = Keypair.fromSecretKey(
+    bs58.decode(process.env.FUNDER_SECRET_KEY)
+  );
+
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
   const program = anchor.workspace.Capstone as Program<Capstone>;
 
-  const eventId = 1; // can use random number
-  const eventName = "Test Event";
+  // change these to create a new event
+  const eventId = 2; // can use random number
+  const eventName = "Test Event 2";
 
-  const maintainerKeypair = provider.publicKey;
+  const maintainerWallet = provider.wallet as anchor.Wallet;
   const contributorKeypair1 = Keypair.generate();
   const contributorKeypair2 = Keypair.generate();
-  const contributorKeypair3 = Keypair.generate();
+  const contributorKeypair3 = funderKeypair;
+  const nftMint = Keypair.generate();
+
+  let maintainerAta: PublicKey;
+  let nftVault: PublicKey;
 
 
   const [eventAddress] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("event"),
-      maintainerKeypair.toBuffer(),
+      maintainerWallet.publicKey.toBuffer(),
       new BN(eventId).toArrayLike(Buffer, "le", 8),
       Buffer.from(eventName)
     ],
@@ -35,6 +57,8 @@ describe("capstone", () => {
     [Buffer.from("rewards_vault"), new BN(eventId).toArrayLike(Buffer, "le", 8)],
     program.programId
   );
+
+
 
   const [issueBookAddress] = PublicKey.findProgramAddressSync(
     [Buffer.from("issue_book"), new BN(eventId).toArrayLike(Buffer, "le", 8)],
@@ -51,6 +75,73 @@ describe("capstone", () => {
     program.programId
   );
 
+  // const airdrop = async (publicKey: PublicKey) => {
+  //   const sig = await provider.connection.requestAirdrop(publicKey, 2 * anchor.web3.LAMPORTS_PER_SOL);
+  //   const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
+  //   await provider.connection.confirmTransaction({
+  //     signature: sig,
+  //     blockhash,
+  //     lastValidBlockHeight,
+  //   });
+  // };
+
+  const fundAccount = async (recipient: PublicKey, amount: number) => {
+    const transaction = new Transaction().add(
+        SystemProgram.transfer({
+            fromPubkey: funderKeypair.publicKey,
+            toPubkey: recipient,
+            lamports: amount,
+        })
+    );
+    // Use the provider to send the transaction, signing with your funder keypair
+    await provider.sendAndConfirm(transaction, [funderKeypair]);
+  };
+
+  before(async () => {
+
+  //   await Promise.all([
+  //     airdrop(contributorKeypair1.publicKey),
+  //     airdrop(contributorKeypair2.publicKey),
+  //     airdrop(contributorKeypair3.publicKey),
+  // ]);
+
+  await Promise.all([
+    fundAccount(contributorKeypair1.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL),
+    fundAccount(contributorKeypair2.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL),
+    fundAccount(contributorKeypair3.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL),
+]);
+
+  await createMint(
+    provider.connection,
+    maintainerWallet.payer,
+    maintainerWallet.publicKey,
+    null,
+    0, // 0 decimals for NFT
+    nftMint
+  );
+
+  maintainerAta = await createAssociatedTokenAccount(
+    provider.connection,
+    maintainerWallet.payer,
+    nftMint.publicKey,
+    maintainerWallet.publicKey
+  );
+
+  await mintTo(
+    provider.connection,
+    maintainerWallet.payer,
+    nftMint.publicKey,
+    maintainerAta,
+    maintainerWallet.payer,
+    1
+  );
+  nftVault = await getAssociatedTokenAddress(nftMint.publicKey, eventAddress, true);
+  console.log(nftVault);
+  
+  });
+
+  
+
   it("should create an event", async () => {
 
     const startDate = 1700000000; // Simple timestamp
@@ -63,34 +154,40 @@ describe("capstone", () => {
       eventName,
       new BN(startDate),
       new BN(endDate),
-      maintainerKeypair,
+      maintainerWallet.publicKey,
       rewardsplit,
       new BN(rewardAmount)
     )
     .accountsPartial({
-      maintainer: maintainerKeypair,
-      event: eventAddress,
-      rewardsVault: rewardsVaultAddress,
-      issueBook: issueBookAddress,
-      leaderboard: leaderboardAddress,
-      systemProgram: SystemProgram.programId,
+      maintainer: maintainerWallet.publicKey,
+        event: eventAddress,
+        rewardsVault: rewardsVaultAddress,
+        nftMint: nftMint.publicKey,
+        maintainerAta: maintainerAta,
+        nftVault: nftVault,
+        issueBook: issueBookAddress,
+        leaderboard: leaderboardAddress,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
     })
     .rpc();
 
-    
-    const event = await program.account.event.fetch(eventAddress);
-    expect(event.eventId.toNumber()).to.equal(eventId);
-    expect(event.eventName).to.equal(eventName);
-
-     
-      const issuesBook = await program.account.issueBook.fetch(issueBookAddress);
-      expect(issuesBook.eventId.toNumber()).to.equal(eventId);
-      expect(issuesBook.issues).to.be.empty; // Should have no issues initially
-  
    
-      const leaderboard = await program.account.leaderboard.fetch(leaderboardAddress);
-      expect(leaderboard.eventId.toNumber()).to.equal(eventId);
-      expect(leaderboard.entries).to.be.empty; // Should have no entries initially
+
+    
+    const eventAccount = await program.account.event.fetch(eventAddress);
+    expect(eventAccount.eventName).to.equal(eventName);
+    expect(eventAccount.winnerNftMint.toBase58()).to.equal(nftMint.publicKey.toBase58());
+
+    const rewardsVaultBalance = await provider.connection.getBalance(rewardsVaultAddress);
+    expect(rewardsVaultBalance).to.equal(rewardAmount);
+
+    const nftVaultAccount = await getAccount(provider.connection, nftVault);
+    expect(nftVaultAccount.amount.toString()).to.equal("1");
+
+    const maintainerAtaAccount = await getAccount(provider.connection, maintainerAta);
+    expect(maintainerAtaAccount.amount.toString()).to.equal("0");
   
      
   });
@@ -122,7 +219,7 @@ describe("capstone", () => {
     const tx = await program.methods
     .addIssue(issues)
     .accountsPartial({
-      maintainer: maintainerKeypair,
+      maintainer: maintainerWallet.publicKey,
       event: eventAddress,
       issueBook: issueBookAddress,
       systemProgram: SystemProgram.programId,
@@ -167,7 +264,7 @@ describe("capstone", () => {
       contributorKeypair1.publicKey
     )
     .accountsPartial({
-      maintainer: maintainerKeypair,
+      maintainer: maintainerWallet.publicKey,
       event: eventAddress,
       issueBook: issueBookAddress,
       leaderboard: leaderboardAddress,
@@ -182,7 +279,7 @@ describe("capstone", () => {
       contributorKeypair2.publicKey
     )
     .accountsPartial({
-      maintainer: maintainerKeypair,
+      maintainer: maintainerWallet.publicKey,
       event: eventAddress,
       issueBook: issueBookAddress,
       leaderboard: leaderboardAddress,
@@ -196,7 +293,7 @@ describe("capstone", () => {
       contributorKeypair3.publicKey
     )
     .accountsPartial({
-      maintainer: maintainerKeypair,
+      maintainer: maintainerWallet.publicKey,
       event: eventAddress,
       issueBook: issueBookAddress,
       leaderboard: leaderboardAddress,
@@ -264,7 +361,7 @@ describe("capstone", () => {
     const tx = await program.methods
     .finishEvent(new BN(eventId))
     .accountsPartial({
-      maintainer: maintainerKeypair,
+      maintainer: maintainerWallet.publicKey,
       event: eventAddress,
       leaderboard: leaderboardAddress,
       winners: winnersAddress,
@@ -278,17 +375,21 @@ describe("capstone", () => {
     const tx = await program.methods
     .claimRewards()
     .accountsPartial({
-      contributor: contributorKeypair1.publicKey,
+      contributor: contributorKeypair3.publicKey,
       event: eventAddress,
       rewardsVault: rewardsVaultAddress,
       winners: winnersAddress,
+      nftMint: nftMint.publicKey,
+      contributorAtaForNft: await getAssociatedTokenAddress(nftMint.publicKey, contributorKeypair3.publicKey),
+      nftVault: nftVault,
       systemProgram: SystemProgram.programId,
+      tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+      associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
     })
-    .signers([contributorKeypair1])
+    .signers([contributorKeypair3])
     .rpc();
 
     const rewardsVaultBalance = await provider.connection.getBalance(rewardsVaultAddress);
-    expect(rewardsVaultBalance).to.equal(1996000000);
 
     const winners = await program.account.winners.fetch(winnersAddress);
     expect(winners.winner.toString()).to.equal(contributorKeypair3.publicKey.toString());

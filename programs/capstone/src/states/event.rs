@@ -9,6 +9,7 @@ pub struct Event {
     pub maintainer: Pubkey,
     pub start_date: i64,
     pub end_date: i64,
+    pub winner_nft_mint: Pubkey,
     pub rewards_split_percentage: [u16; 3],
     pub event_bump: u8,
     pub rewards_vault_bump: u8,

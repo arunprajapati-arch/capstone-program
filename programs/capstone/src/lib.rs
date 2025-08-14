@@ -8,7 +8,7 @@ mod error;
 use contexts::*;
 use states::Issue;
 
-declare_id!("FmmqVhW1XEkeFF5TJFkGKGfMysN35Z2rEfDHwae9hx92");
+declare_id!("FiAT3pmeGqjNnnNUbRXMXN5D8xYmrcq6FYCkrJMZ4Ltf");
 
 #[program]
 pub mod capstone {
@@ -26,6 +26,7 @@ pub mod capstone {
     ) -> Result<()> {
         ctx.accounts.create_event(event_id, name, start_date, end_date, maintainer, rewards_split_percentage, &ctx.bumps)?;
         ctx.accounts.deposit_rewards(amount)?;
+        ctx.accounts.deposit_nft()?;
         Ok(())
     }
 
@@ -54,7 +55,9 @@ pub mod capstone {
     pub fn claim_rewards(
         ctx: Context<ClaimRewards>,
     ) -> Result<()> {
-        ctx.accounts.claim_rewards()
+        ctx.accounts.transfer_nft()?;
+        ctx.accounts.transfer_reward()?;
+        Ok(())
     }
 }
 

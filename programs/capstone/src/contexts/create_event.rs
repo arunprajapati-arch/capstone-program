@@ -1,5 +1,9 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
-
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{transfer_checked, TransferChecked},
+    token_interface::{Mint, TokenAccount, TokenInterface},
+};
 use crate::states::{Event, IssueBook, Leaderboard};
 
 #[derive(Accounts)]
@@ -25,6 +29,25 @@ pub struct CreateEvent<'info> {
     )]
     pub rewards_vault: SystemAccount<'info>,
 
+    pub nft_mint: InterfaceAccount<'info, Mint>,
+    #[account(
+        mut,
+        associated_token::mint = nft_mint,
+        associated_token::authority = maintainer,
+        associated_token::token_program = token_program
+    )]
+    pub maintainer_ata: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = maintainer,
+        associated_token::mint = nft_mint,
+        associated_token::authority = event,
+        associated_token::token_program = token_program,
+    )]
+    pub nft_vault: InterfaceAccount<'info, TokenAccount>,
+
+
+
     #[account(
         init,
         payer = maintainer,
@@ -44,6 +67,8 @@ pub struct CreateEvent<'info> {
     pub leaderboard: Account<'info, Leaderboard>,
 
     pub system_program: Program<'info, System>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 impl<'info> CreateEvent<'info> {
@@ -63,6 +88,7 @@ impl<'info> CreateEvent<'info> {
             maintainer,
             start_date, 
             end_date,
+            winner_nft_mint: self.nft_mint.key(),
             rewards_split_percentage,
             event_bump: bumps.event, 
             rewards_vault_bump: bumps.rewards_vault,
@@ -86,6 +112,18 @@ impl<'info> CreateEvent<'info> {
         Ok(())
     }
 
+     pub fn deposit_nft(&mut self) -> Result<()> {
+        let cpi_program = self.token_program.to_account_info();
+        let cpi_accounts = TransferChecked {
+            from: self.maintainer_ata.to_account_info(),
+            mint: self.nft_mint.to_account_info(),
+            to: self.nft_vault.to_account_info(),
+            authority: self.maintainer.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        transfer_checked(cpi_ctx, 1, 0)
+    }
+
     pub fn deposit_rewards(&mut self, amount: u64) -> Result<()> {
         let cpi_program = self.system_program.to_account_info();
         let cpi_accounts = Transfer {
@@ -96,5 +134,6 @@ impl<'info> CreateEvent<'info> {
         transfer(cpi_ctx, amount)?;
         Ok(())
     }
+
 
 }
