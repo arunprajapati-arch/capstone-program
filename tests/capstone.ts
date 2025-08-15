@@ -30,13 +30,13 @@ describe("capstone", () => {
   const program = anchor.workspace.Capstone as Program<Capstone>;
 
   // change these to create a new event
-  const eventId = 2; // can use random number
-  const eventName = "Test Event 2";
+  const eventId = 5; // can use random number
+  const eventName = "Test Event 5";
 
   const maintainerWallet = provider.wallet as anchor.Wallet;
   const contributorKeypair1 = Keypair.generate();
   const contributorKeypair2 = Keypair.generate();
-  const contributorKeypair3 = funderKeypair;
+  const contributorKeypair3 = funderKeypair;  // This is going to be winner of event and also airdropping SOL to the contributors because of rate limiting issues with airdrop
   const nftMint = Keypair.generate();
 
   let maintainerAta: PublicKey;
@@ -85,6 +85,8 @@ describe("capstone", () => {
   //   });
   // };
 
+
+  // Using this to airdrop SOL to the contributors because of rate limiting issues with airdrop
   const fundAccount = async (recipient: PublicKey, amount: number) => {
     const transaction = new Transaction().add(
         SystemProgram.transfer({
@@ -233,23 +235,18 @@ describe("capstone", () => {
   })
 
   it("Should not be able to resolve issue if not maintainer", async () => {
-    const randomKeypair = Keypair.generate();
-    try {
-      await provider.connection.requestAirdrop(randomKeypair.publicKey, 1000000000);
-    } catch (error) {
-      console.error("Airdrop failed:", error);
-    }
+   
     try {
       await program.methods
-      .resolveIssue(new BN(1), randomKeypair.publicKey)
+      .resolveIssue(new BN(1), contributorKeypair3.publicKey)
       .accountsPartial({
-        maintainer: randomKeypair.publicKey,
+        maintainer: contributorKeypair3.publicKey,
         event: eventAddress,
         issueBook: issueBookAddress,
         leaderboard: leaderboardAddress,
         systemProgram: SystemProgram.programId,
       })
-      .signers([randomKeypair])
+      .signers([contributorKeypair3])
       .rpc();
       expect.fail("Should not be able to resolve issue if not maintainer");
     } catch (error) {
@@ -317,31 +314,22 @@ describe("capstone", () => {
 
 
   it("Should not be able to finish an event if not maintainer", async () => {
-    const randomKeypair = Keypair.generate();
+   
     
     try {
       // Airdrop SOL so the random keypair can pay for the transaction fee
-      const airdropSignature = await provider.connection.requestAirdrop(
-        randomKeypair.publicKey,
-        1000000000 // 1 SOL
-      );
-      const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
-      await provider.connection.confirmTransaction({
-        signature: airdropSignature,
-        blockhash: blockhash,
-        lastValidBlockHeight: lastValidBlockHeight
-      });
+     
   
       await program.methods
         .finishEvent(new BN(eventId))
         .accountsPartial({
-          maintainer: randomKeypair.publicKey, 
+          maintainer: contributorKeypair3.publicKey, 
           event: eventAddress,
           leaderboard: leaderboardAddress,
           winners: winnersAddress,
           systemProgram: SystemProgram.programId,
         })
-        .signers([randomKeypair]) // Signing with the wrong key
+        .signers([contributorKeypair3]) 
         .rpc();
   
       expect.fail("The transaction should have failed but did not.");
